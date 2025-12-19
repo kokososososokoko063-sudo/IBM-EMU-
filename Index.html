@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكي IBM 5150</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --bezel-color: #dcd6c8; /* لون الهيكل البيج القديم */
+            --screen-black: #111;
+            --phosphor-blue: #0ff; /* الأزرق المتوهج */
+            --phosphor-blue-dim: #008888;
+            --glare: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            background-color: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'VT323', monospace;
+        }
+
+        /* حاوية الشاشة (المونيتور) */
+        .monitor {
+            width: 90vw;
+            max-width: 800px;
+            height: 70vh;
+            max-height: 600px;
+            background-color: var(--bezel-color);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.2),
+                0 0 50px rgba(0,0,0,0.5),
+                15px 15px 30px rgba(0,0,0,0.3);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* شعار IBM */
+        .brand-logo {
+            align-self: flex-start;
+            margin-bottom: 15px;
+            margin-right: 20px; /* للغة العربية */
+            margin-left: 20px; 
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            font-size: 24px;
+            color: #333;
+            letter-spacing: 2px;
+            background: linear-gradient(to bottom, #333 0%, #333 15%, transparent 15%, transparent 25%, #333 25%, #333 40%, transparent 40%, transparent 50%, #333 50%, #333 65%, transparent 65%, transparent 75%, #333 75%, #333 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
+            border: 2px solid #555;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* إطار الشاشة الداخلي */
+        .screen-bezel {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 50% / 10%;
+            border-top-left-radius: 80px 40px; 
+            border-top-right-radius: 80px 40px;
+            border-bottom-left-radius: 80px 40px;
+            border-bottom-right-radius: 80px 40px;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            box-shadow: inset 0 0 20px 10px rgba(255,255,255,0.1);
+        }
+
+        /* الشاشة نفسها (CRT) */
+        .crt-screen {
+            width: 100%;
+            height: 100%;
+            background-color: var(--screen-black);
+            color: var(--phosphor-blue);
+            font-size: 1.2rem;
+            line-height: 1.4;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 2px var(--phosphor-blue-dim), 0 0 8px var(--phosphor-blue);
+            /* إخفاء شريط التمرير */
+            scrollbar-width: none; 
+            border-radius: 20px;
+            padding: 10px;
+            direction: ltr; /* نظام التشغيل بالإنجليزية */
+            text-align: left;
+        }
+
+        .crt-screen::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* تأثيرات الشاشة القديمة (Scanlines & Flicker) */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 5;
+            border-radius: 60px / 20px;
+        }
+
+        .screen-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,255,255,0.05) 0%, rgba(0,0,0,0.4) 100%);
+            pointer-events: none;
+            z-index: 4;
+            animation: flicker 0.15s infinite;
+        }
+
+        /* المؤشر الوامض */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: var(--phosphor-blue);
+            animation: blink 1s step-end infinite;
+            vertical-align: bottom;
+        }
+
+        /* الإدخال المخفي للهواتف */
+        #hidden-input {
+            position: absolute;
+            opacity: 0;
+            top: -1000px;
+        }
+
+        /* أزرار التشغيل الوهمية */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            align-self: flex-end;
+            margin-right: 40px;
+        }
+
+        .knob {
+            width: 30px;
+            height: 30px;
+            background: #b8b09e;
+            border-radius: 50%;
+            border: 2px solid #999;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+        .power-switch {
+            width: 40px;
+            height: 25px;
+            background: #a00;
+            border: 2px solid #600;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.3);
+            cursor: pointer;
+        }
+        
+        .power-led {
+            width: 10px;
+            height: 10px;
+            background-color: #333; /* Off state */
+            border-radius: 50%;
+            margin-top: 8px;
+            margin-left: 10px;
+        }
+
+        .power-led.on {
+            background-color: #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 0.99; }
+            10% { opacity: 0.94; }
+            15% { opacity: 0.98; }
+            20% { opacity: 0.96; }
+            50% { opacity: 0.98; }
+            100% { opacity: 0.95; }
+        }
+
+        /* ASCII Art Styling */
+        .ascii-art {
+            font-size: 10px;
+            line-height: 10px;
+            white-space: pre;
+            color: var(--phosphor-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="monitor">
+        <div class="brand-logo">IBM</div>
+        
+        <div class="screen-bezel">
+            <div class="overlay"></div>
+            <div class="screen-glow"></div>
+            <div class="crt-screen" id="terminal" onclick="focusInput()">
+                <!-- المحتوى سيتم إنشاؤه بواسطة جافاسكريبت -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="power-led" id="power-led"></div>
+            <div class="knob" style="transform: rotate(45deg);"></div>
+            <div class="knob" style="transform: rotate(120deg);"></div>
+            <div class="power-switch" onclick="togglePower()"></div>
+        </div>
+    </div>
+
+    <input type="text" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const hiddenInput = document.getElementById('hidden-input');
+        const powerLed = document.getElementById('power-led');
+        let isPowerOn = false;
+        let isBooting = false;
+        let commandHistory = [];
+        let historyIndex = -1;
+        let currentInput = "";
+
+        // الأصوات (محاكاة بسيطة)
+        const keySound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'); // فارغ حالياً لتجنب مشاكل المتصفح
+
+        function focusInput() {
+            if (isPowerOn && !isBooting) {
+                hiddenInput.focus();
+            }
+        }
+
+        // تشغيل الجهاز
+        function togglePower() {
+            if (isPowerOn) {
+                // إيقاف التشغيل
+                isPowerOn = false;
+                terminal.innerHTML = "";
+                powerLed.classList.remove('on');
+                hiddenInput.blur();
+            } else {
+                // بدء التشغيل
+                isPowerOn = true;
+                powerLed.classList.add('on');
+                bootSequence();
+            }
+        }
+
+        // تسلسل الإقلاع (Boot)
+        async function bootSequence() {
+            isBooting = true;
+            terminal.innerHTML = "";
+            
+            const printLine = (text, delay) => new Promise(resolve => {
+                setTimeout(() => {
+                    terminal.innerHTML += text + "\n";
+                    terminal.scrollTop = terminal.scrollHeight;
+                    resolve();
+                }, delay);
+            });
+
+            await printLine("IBM Personal Computer BASIC", 500);
+            await printLine("Version C1.10 Copyright IBM Corp 1981", 800);
+            await printLine("61404 Bytes free", 400);
+            await printLine("Ok", 400);
+            await printLine("", 200);
+            
+            isBooting = false;
+            printPrompt();
+            focusInput();
+        }
+
+        function printPrompt() {
+            terminal.innerHTML += `A:> <span id="current-cmd"></span><span class="cursor"> </span>`;
+            terminal.scrollTop = terminal.scrollHeight;
+            currentInput = "";
+            hiddenInput.value = "";
+        }
+
+        // معالجة المدخلات
+        hiddenInput.addEventListener('input', (e) => {
+            if (!isPowerOn || isBooting) return;
+            const cmdSpan = document.getElementById('current-cmd');
+            if(cmdSpan) {
+                cmdSpan.textContent = hiddenInput.value;
+                currentInput = hiddenInput.value;
+            }
+        });
+
+        hiddenInput.addEventListener('keydown', (e) => {
+            if (!isPowerOn || isBooting) return;
+
+            if (e.key === 'Enter') {
+                processCommand(hiddenInput.value);
+            }
+        });
+
+        // التقاط لوحة المفاتيح المباشرة للكمبيوتر المكتبي
+        document.addEventListener('keydown', (e) => {
+            if (!isPowerOn || isBooting) return;
+            hiddenInput.focus();
+        });
+
+        function processCommand(cmd) {
+            // إزالة المؤشر القديم
+            const cursor = document.querySelector('.cursor');
+            if (cursor) cursor.remove();
+            
+            // تثبيت النص المكتوب
+            const cmdSpan = document.getElementById('current-cmd');
+            if(cmdSpan) {
+                cmdSpan.id = ""; // إزالة المعرف
+            }
+
+            terminal.innerHTML += "\n"; // سطر جديد
+
+            const cleanCmd = cmd.trim().toUpperCase();
+
+            // منطق الأوامر
+            let output = "";
+
+            switch (cleanCmd) {
+                case "HELP":
+                case "?":
+                    output = "COMMANDS LIST:\n - DIR: List files\n - DATE: Show current date\n - CLS: Clear screen\n - ECHO [TEXT]: Print text\n - IBM: Draw IBM Logo\n - ABOUT: About this system";
+                    break;
+                case "DIR":
+                    output = " Volume in drive A has no label\n Directory of A:\\\n\nCOMMAND  COM    17792 10-20-83  12:00p\nAUTOEXEC BAT       24 01-01-80  12:01a\nCONFIG   SYS       18 01-01-80  12:01a\nIBM      BAS    12040 05-06-82   3:10p\nGAME     EXE    32512 11-14-84   5:20p\n        5 File(s)    61404 bytes free";
+                    break;
+                case "CLS":
+                    terminal.innerHTML = "";
+                    printPrompt();
+                    return; // خروج مبكر
+                case "DATE":
+                    output = "Current date is " + new Date().toDateString();
+                    break;
+                case "IBM":
+                    output = `<div class="ascii-art">
+IIIIII  BBBBBB   MM    MM
+  II    BB   BB  MMM  MMM
+  II    BBBBBB   MM MM MM
+  II    BB   BB  MM    MM
+IIIIII  BBBBBB   MM    MM
+                    </div>`;
+                    break;
+                case "ABOUT":
+                    output = "IBM PC Simulator v1.0\nCreated for demonstration.\nBlue Phosphor Emulation Mode.";
+                    break;
+                case "":
+                    break;
+                default:
+                    if (cleanCmd.startsWith("ECHO ")) {
+                        output = cmd.substring(5);
+                    } else {
+                        output = "Bad command or file name";
+                    }
+            }
+
+            if (output) {
+                terminal.innerHTML += output + "\n\n";
+            } else if (cleanCmd !== "") {
+                terminal.innerHTML += "\n";
+            }
+
+            printPrompt();
+        }
+
+        // بدء التشغيل تلقائياً عند التحميل
+        setTimeout(togglePower, 500);
+
+    </script>
+</body>
+</html>
