@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكي IBM 5150</title>
+    <title>محاكي IBM 5150 المطور</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         :root {
-            --bezel-color: #dcd6c8; /* لون الهيكل البيج القديم */
-            --screen-black: #111;
-            --phosphor-blue: #0ff; /* الأزرق المتوهج */
-            --phosphor-blue-dim: #008888;
+            --bezel-color: #dcd6c8;
+            --screen-black: #101010;
+            --phosphor-blue: #aaddff; /* أزرق فاتح مائل للأبيض قليلاً لمحاكاة IBM القديمة */
+            --phosphor-blue-glow: #0055aa;
             --glare: rgba(255, 255, 255, 0.05);
         }
 
         body {
-            background-color: #222;
+            background-color: #1a1a1a;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,171 +24,185 @@
             margin: 0;
             overflow: hidden;
             font-family: 'VT323', monospace;
+            user-select: none;
         }
 
-        /* حاوية الشاشة (المونيتور) */
         .monitor {
             width: 90vw;
-            max-width: 800px;
-            height: 70vh;
-            max-height: 600px;
+            max-width: 840px;
+            height: 75vh;
+            max-height: 640px;
             background-color: var(--bezel-color);
             border-radius: 20px;
-            padding: 30px;
+            padding: 35px;
             box-shadow: 
                 inset 0 0 20px rgba(0,0,0,0.2),
-                0 0 50px rgba(0,0,0,0.5),
-                15px 15px 30px rgba(0,0,0,0.3);
+                0 0 60px rgba(0,0,0,0.6),
+                20px 20px 40px rgba(0,0,0,0.4);
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        /* شعار IBM */
-        .brand-logo {
+        .brand-badge {
             align-self: flex-start;
             margin-bottom: 15px;
-            margin-right: 20px; /* للغة العربية */
-            margin-left: 20px; 
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 900;
-            font-size: 24px;
-            color: #333;
-            letter-spacing: 2px;
-            background: linear-gradient(to bottom, #333 0%, #333 15%, transparent 15%, transparent 25%, #333 25%, #333 40%, transparent 40%, transparent 50%, #333 50%, #333 65%, transparent 65%, transparent 75%, #333 75%, #333 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
-            border: 2px solid #555;
-            padding: 2px 8px;
-            border-radius: 4px;
+            margin-left: 20px;
+            background: #444;
+            padding: 4px 12px;
+            border-radius: 2px;
+            border: 1px solid #777;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
 
-        /* إطار الشاشة الداخلي */
+        .brand-logo {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            font-size: 20px;
+            color: #dcd6c8;
+            letter-spacing: 2px;
+        }
+
         .screen-bezel {
             width: 100%;
             height: 100%;
-            background: #000;
+            background: #080808;
             border-radius: 50% / 10%;
-            border-top-left-radius: 80px 40px; 
-            border-top-right-radius: 80px 40px;
-            border-bottom-left-radius: 80px 40px;
-            border-bottom-right-radius: 80px 40px;
-            padding: 20px;
+            border-top-left-radius: 60px 40px; 
+            border-top-right-radius: 60px 40px;
+            border-bottom-left-radius: 60px 40px;
+            border-bottom-right-radius: 60px 40px;
+            padding: 25px;
             box-sizing: border-box;
             position: relative;
-            box-shadow: inset 0 0 20px 10px rgba(255,255,255,0.1);
+            box-shadow: inset 0 0 30px 15px rgba(200,200,200,0.05);
+            overflow: hidden;
         }
 
-        /* الشاشة نفسها (CRT) */
         .crt-screen {
             width: 100%;
             height: 100%;
             background-color: var(--screen-black);
             color: var(--phosphor-blue);
-            font-size: 1.2rem;
-            line-height: 1.4;
-            overflow-y: auto;
+            font-size: 1.3rem;
+            line-height: 1.3;
+            overflow-y: hidden; /* تحكم يدوي بالتمرير */
             white-space: pre-wrap;
             position: relative;
             z-index: 2;
-            text-shadow: 0 0 2px var(--phosphor-blue-dim), 0 0 8px var(--phosphor-blue);
-            /* إخفاء شريط التمرير */
-            scrollbar-width: none; 
+            text-shadow: 0 0 4px var(--phosphor-blue-glow);
             border-radius: 20px;
             padding: 10px;
-            direction: ltr; /* نظام التشغيل بالإنجليزية */
+            direction: ltr;
             text-align: left;
         }
 
-        .crt-screen::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* تأثيرات الشاشة القديمة (Scanlines & Flicker) */
-        .overlay {
+        /* Scanlines */
+        .scanlines {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0px,
+                transparent 2px,
+                rgba(0, 0, 0, 0.3) 3px
+            );
             pointer-events: none;
             z-index: 5;
-            border-radius: 60px / 20px;
+            border-radius: 20px;
         }
 
-        .screen-glow {
+        /* Screen Flicker */
+        .flicker {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, rgba(0,255,255,0.05) 0%, rgba(0,0,0,0.4) 100%);
+            background: rgba(255, 255, 255, 0.02);
+            opacity: 0;
             pointer-events: none;
-            z-index: 4;
-            animation: flicker 0.15s infinite;
+            z-index: 6;
+            animation: flickerAnim 0.1s infinite;
         }
 
-        /* المؤشر الوامض */
+        @keyframes flickerAnim {
+            0% { opacity: 0.01; }
+            50% { opacity: 0.03; }
+            100% { opacity: 0.01; }
+        }
+
         .cursor {
             display: inline-block;
-            width: 10px;
-            height: 1.2em;
+            width: 0.6em;
+            height: 1.1em;
             background-color: var(--phosphor-blue);
             animation: blink 1s step-end infinite;
-            vertical-align: bottom;
+            vertical-align: sub;
         }
 
-        /* الإدخال المخفي للهواتف */
         #hidden-input {
             position: absolute;
             opacity: 0;
             top: -1000px;
         }
 
-        /* أزرار التشغيل الوهمية */
         .controls {
             display: flex;
-            gap: 15px;
-            margin-top: 15px;
+            gap: 20px;
+            margin-top: 20px;
             align-self: flex-end;
-            margin-right: 40px;
+            margin-right: 50px;
+            align-items: center;
         }
 
         .knob {
-            width: 30px;
-            height: 30px;
-            background: #b8b09e;
+            width: 35px;
+            height: 35px;
+            background: radial-gradient(circle at 30% 30%, #eee, #999);
             border-radius: 50%;
-            border: 2px solid #999;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            border: 1px solid #666;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
         }
+
+        .power-switch-container {
+            background: #333;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #555;
+        }
+
         .power-switch {
-            width: 40px;
-            height: 25px;
-            background: #a00;
-            border: 2px solid #600;
+            width: 50px;
+            height: 30px;
+            background: #b00;
+            border: 3px solid #600;
             box-shadow: inset 2px 2px 5px rgba(255,255,255,0.3);
             cursor: pointer;
+            transition: background 0.2s;
         }
         
+        .power-switch:active {
+            background: #900;
+            transform: scale(0.95);
+        }
+
         .power-led {
-            width: 10px;
-            height: 10px;
-            background-color: #333; /* Off state */
+            width: 12px;
+            height: 12px;
+            background-color: #222;
             border-radius: 50%;
-            margin-top: 8px;
-            margin-left: 10px;
+            border: 1px solid #000;
+            transition: all 0.3s;
         }
 
         .power-led.on {
             background-color: #0f0;
-            box-shadow: 0 0 5px #0f0;
+            box-shadow: 0 0 10px #0f0, inset 0 0 2px #fff;
         }
 
         @keyframes blink {
@@ -196,43 +210,34 @@
             50% { opacity: 0; }
         }
 
-        @keyframes flicker {
-            0% { opacity: 0.97; }
-            5% { opacity: 0.99; }
-            10% { opacity: 0.94; }
-            15% { opacity: 0.98; }
-            20% { opacity: 0.96; }
-            50% { opacity: 0.98; }
-            100% { opacity: 0.95; }
-        }
-
-        /* ASCII Art Styling */
-        .ascii-art {
-            font-size: 10px;
-            line-height: 10px;
-            white-space: pre;
-            color: var(--phosphor-blue);
+        /* Status Bar for Editor */
+        .status-bar {
+            background-color: var(--phosphor-blue);
+            color: var(--screen-black);
+            padding: 0 5px;
+            margin-top: 5px;
+            display: none;
         }
     </style>
 </head>
 <body>
 
     <div class="monitor">
-        <div class="brand-logo">IBM</div>
+        <div class="brand-badge"><div class="brand-logo">IBM</div></div>
         
         <div class="screen-bezel">
-            <div class="overlay"></div>
-            <div class="screen-glow"></div>
-            <div class="crt-screen" id="terminal" onclick="focusInput()">
-                <!-- المحتوى سيتم إنشاؤه بواسطة جافاسكريبت -->
-            </div>
+            <div class="scanlines"></div>
+            <div class="flicker"></div>
+            <div class="crt-screen" id="terminal" onclick="focusInput()"></div>
         </div>
 
         <div class="controls">
             <div class="power-led" id="power-led"></div>
             <div class="knob" style="transform: rotate(45deg);"></div>
             <div class="knob" style="transform: rotate(120deg);"></div>
-            <div class="power-switch" onclick="togglePower()"></div>
+            <div class="power-switch-container">
+                <div class="power-switch" onclick="togglePower()"></div>
+            </div>
         </div>
     </div>
 
@@ -242,55 +247,120 @@
         const terminal = document.getElementById('terminal');
         const hiddenInput = document.getElementById('hidden-input');
         const powerLed = document.getElementById('power-led');
+        
+        // System State
         let isPowerOn = false;
         let isBooting = false;
-        let commandHistory = [];
-        let historyIndex = -1;
-        let currentInput = "";
+        let currentMode = "SHELL"; // SHELL, EDITOR, CALC, ASM
+        let currentPath = "A:\\";
+        
+        // Audio Context
+        let audioCtx;
+        
+        // File System (In-Memory)
+        const fileSystem = {
+            "README.TXT": "WELCOME TO IBM SIMULATOR V2.0\n\nCOMMANDS:\n- DIR: List files\n- EDIT [FILE]: Create/Edit text\n- TYPE [FILE]: View text\n- CALC: Calculator\n- ASM [FILE]: Run Assembly code\n- CAL: Calendar\n- DATE: Show Date\n- CLS: Clear Screen",
+            "HELLO.ASM": "MOV AX, 10\nADD AX, 20\nINT 1\nHLT",
+            "TODO.TXT": "1. Learn Assembly\n2. Fix bug in line 40\n3. Buy coffee"
+        };
 
-        // الأصوات (محاكاة بسيطة)
-        const keySound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'); // فارغ حالياً لتجنب مشاكل المتصفح
+        // Editor Buffer
+        let editorBuffer = "";
+        let editorFilename = "";
+
+        // ASM Machine State
+        let asmRegisters = { AX: 0, BX: 0, CX: 0, DX: 0 };
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playBeep(freq = 440, duration = 0.1, type = 'square') {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playBootSound() {
+            initAudio();
+            // Simulate HDD Spin up noise (White noise)
+            const bufferSize = audioCtx.sampleRate * 1.5; // 1.5 seconds
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 0.2 - 0.1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+            noise.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+            noise.start();
+
+            // The famous IBM Beep
+            setTimeout(() => playBeep(440, 0.3, 'square'), 1000);
+        }
 
         function focusInput() {
-            if (isPowerOn && !isBooting) {
+            if (isPowerOn) {
                 hiddenInput.focus();
             }
         }
 
-        // تشغيل الجهاز
         function togglePower() {
             if (isPowerOn) {
-                // إيقاف التشغيل
+                // Shut down
                 isPowerOn = false;
                 terminal.innerHTML = "";
                 powerLed.classList.remove('on');
                 hiddenInput.blur();
+                currentMode = "SHELL";
+                if(audioCtx) audioCtx.suspend();
             } else {
-                // بدء التشغيل
+                // Boot up
                 isPowerOn = true;
                 powerLed.classList.add('on');
                 bootSequence();
             }
         }
 
-        // تسلسل الإقلاع (Boot)
         async function bootSequence() {
             isBooting = true;
             terminal.innerHTML = "";
+            playBootSound();
             
-            const printLine = (text, delay) => new Promise(resolve => {
-                setTimeout(() => {
-                    terminal.innerHTML += text + "\n";
-                    terminal.scrollTop = terminal.scrollHeight;
-                    resolve();
-                }, delay);
-            });
+            const print = (txt) => {
+                terminal.innerHTML += txt + "\n";
+                terminal.scrollTop = terminal.scrollHeight;
+            };
 
-            await printLine("IBM Personal Computer BASIC", 500);
-            await printLine("Version C1.10 Copyright IBM Corp 1981", 800);
-            await printLine("61404 Bytes free", 400);
-            await printLine("Ok", 400);
-            await printLine("", 200);
+            await new Promise(r => setTimeout(r, 800));
+            print("IBM Personal Computer BIOS V2.0");
+            await new Promise(r => setTimeout(r, 500));
+            print("Checking RAM...");
+            await new Promise(r => setTimeout(r, 1000));
+            print("640KB OK");
+            await new Promise(r => setTimeout(r, 400));
+            print("Keyboard... OK");
+            await new Promise(r => setTimeout(r, 400));
+            print("Loading DOS...");
+            await new Promise(r => setTimeout(r, 800));
+            terminal.innerHTML = ""; // Clear for OS start
             
             isBooting = false;
             printPrompt();
@@ -298,102 +368,319 @@
         }
 
         function printPrompt() {
-            terminal.innerHTML += `A:> <span id="current-cmd"></span><span class="cursor"> </span>`;
+            if (currentMode === "SHELL") {
+                terminal.innerHTML += `${currentPath}> <span id="current-cmd"></span><span class="cursor"> </span>`;
+            } else if (currentMode === "CALC") {
+                terminal.innerHTML += `CALC> <span id="current-cmd"></span><span class="cursor"> </span>`;
+            } else if (currentMode === "ASM") {
+                 terminal.innerHTML += `ASM> <span id="current-cmd"></span><span class="cursor"> </span>`;
+            }
             terminal.scrollTop = terminal.scrollHeight;
-            currentInput = "";
             hiddenInput.value = "";
         }
 
-        // معالجة المدخلات
-        hiddenInput.addEventListener('input', (e) => {
+        // --- INPUT HANDLING ---
+        hiddenInput.addEventListener('input', () => {
             if (!isPowerOn || isBooting) return;
+            
+            if (currentMode === "EDITOR") {
+                // Editor handling is special, we don't use the simple line buffer
+                renderEditor();
+                return;
+            }
+
             const cmdSpan = document.getElementById('current-cmd');
-            if(cmdSpan) {
+            if (cmdSpan) {
                 cmdSpan.textContent = hiddenInput.value;
-                currentInput = hiddenInput.value;
+                playBeep(800, 0.01, 'sine'); // Key click sound
             }
         });
 
-        hiddenInput.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', (e) => {
             if (!isPowerOn || isBooting) return;
+            hiddenInput.focus();
+
+            if (currentMode === "EDITOR") {
+                handleEditorKey(e);
+                return;
+            }
 
             if (e.key === 'Enter') {
+                e.preventDefault();
                 processCommand(hiddenInput.value);
             }
         });
 
-        // التقاط لوحة المفاتيح المباشرة للكمبيوتر المكتبي
-        document.addEventListener('keydown', (e) => {
-            if (!isPowerOn || isBooting) return;
-            hiddenInput.focus();
-        });
-
-        function processCommand(cmd) {
-            // إزالة المؤشر القديم
+        // --- COMMAND PROCESSING ---
+        function processCommand(rawCmd) {
             const cursor = document.querySelector('.cursor');
             if (cursor) cursor.remove();
-            
-            // تثبيت النص المكتوب
-            const cmdSpan = document.getElementById('current-cmd');
-            if(cmdSpan) {
-                cmdSpan.id = ""; // إزالة المعرف
+            document.getElementById('current-cmd').id = ""; // Unbind
+
+            terminal.innerHTML += "\n";
+
+            const parts = rawCmd.trim().split(/\s+/);
+            const cmd = parts[0].toUpperCase();
+            const args = parts.slice(1);
+
+            if (currentMode === "SHELL") {
+                executeShell(cmd, args, rawCmd);
+            } else if (currentMode === "CALC") {
+                executeCalc(rawCmd.trim());
+            } else if (currentMode === "ASM") {
+                executeAsmREPL(rawCmd.trim());
             }
+        }
 
-            terminal.innerHTML += "\n"; // سطر جديد
-
-            const cleanCmd = cmd.trim().toUpperCase();
-
-            // منطق الأوامر
-            let output = "";
-
-            switch (cleanCmd) {
+        // --- SHELL COMMANDS ---
+        function executeShell(cmd, args, rawLine) {
+            switch (cmd) {
                 case "HELP":
                 case "?":
-                    output = "COMMANDS LIST:\n - DIR: List files\n - DATE: Show current date\n - CLS: Clear screen\n - ECHO [TEXT]: Print text\n - IBM: Draw IBM Logo\n - ABOUT: About this system";
-                    break;
-                case "DIR":
-                    output = " Volume in drive A has no label\n Directory of A:\\\n\nCOMMAND  COM    17792 10-20-83  12:00p\nAUTOEXEC BAT       24 01-01-80  12:01a\nCONFIG   SYS       18 01-01-80  12:01a\nIBM      BAS    12040 05-06-82   3:10p\nGAME     EXE    32512 11-14-84   5:20p\n        5 File(s)    61404 bytes free";
+                    printOut("COMMANDS: DIR, CLS, DATE, CAL, CALC, EDIT, TYPE, ASM, VER");
                     break;
                 case "CLS":
                     terminal.innerHTML = "";
-                    printPrompt();
-                    return; // خروج مبكر
+                    break;
+                case "DIR":
+                    let output = " Volume in drive A is SIMULATOR\n Directory of A:\\\n\n";
+                    let count = 0;
+                    for (let f in fileSystem) {
+                        // Fake styling for EXE files vs TXT
+                        let size = Math.floor(Math.random() * 5000) + 100;
+                        let spaces = " ".repeat(12 - f.length);
+                        output += `${f}${spaces} ${size}  12-20-85  12:00p\n`;
+                        count++;
+                    }
+                    // Add built-in programs to list (virtual)
+                    output += `CALC    EXE      8000  01-01-85  12:00p\n`;
+                    output += `EDIT    COM      4500  01-01-85  12:00p\n`;
+                    output += `ASM     EXE      9200  01-01-85  12:00p\n`;
+                    output += `       ${count + 3} File(s)    54020 bytes free`;
+                    printOut(output);
+                    break;
                 case "DATE":
-                    output = "Current date is " + new Date().toDateString();
+                    printOut("Current date is " + new Date().toDateString());
                     break;
-                case "IBM":
-                    output = `<div class="ascii-art">
-IIIIII  BBBBBB   MM    MM
-  II    BB   BB  MMM  MMM
-  II    BBBBBB   MM MM MM
-  II    BB   BB  MM    MM
-IIIIII  BBBBBB   MM    MM
-                    </div>`;
+                case "CAL":
+                    showCalendar();
                     break;
-                case "ABOUT":
-                    output = "IBM PC Simulator v1.0\nCreated for demonstration.\nBlue Phosphor Emulation Mode.";
+                case "TYPE":
+                    if (!args[0]) {
+                        printOut("Error: File not specified");
+                    } else {
+                        const filename = args[0].toUpperCase();
+                        if (fileSystem[filename]) {
+                            printOut(fileSystem[filename]);
+                        } else {
+                            printOut("File not found");
+                        }
+                    }
+                    break;
+                case "EDIT":
+                    startEditor(args[0]);
+                    return; // Return early to avoid printing prompt immediately
+                case "CALC":
+                    currentMode = "CALC";
+                    printOut("IBM PC Calculator v1.0\nType expression (e.g. 5 + 10) or EXIT to quit.");
+                    break;
+                case "ASM":
+                    if (args[0]) {
+                        runAsmFile(args[0]);
+                    } else {
+                        currentMode = "ASM";
+                        printOut("IBM 8088 Assembler (Mini)\nType instructions (MOV AX,5) or EXIT.");
+                        asmRegisters = { AX: 0, BX: 0, CX: 0, DX: 0 };
+                    }
+                    break;
+                case "VER":
+                    printOut("IBM DOS Version 2.0 (Simulated)");
                     break;
                 case "":
                     break;
                 default:
-                    if (cleanCmd.startsWith("ECHO ")) {
-                        output = cmd.substring(5);
-                    } else {
-                        output = "Bad command or file name";
+                    // Check if user typed a filename directly (e.g. "calc", "readme.txt")
+                    if (cmd === "CALC" || cmd === "CALC.EXE") { executeShell("CALC", [], ""); return; }
+                    if (fileSystem[cmd]) {
+                        // User typed filename, maybe they want to run it?
+                        if (cmd.endsWith(".ASM")) { runAsmFile(cmd); break; }
+                        if (cmd.endsWith(".TXT")) { printOut(fileSystem[cmd]); break; }
                     }
+                    printOut("Bad command or file name");
             }
-
-            if (output) {
-                terminal.innerHTML += output + "\n\n";
-            } else if (cleanCmd !== "") {
-                terminal.innerHTML += "\n";
-            }
-
             printPrompt();
         }
 
-        // بدء التشغيل تلقائياً عند التحميل
-        setTimeout(togglePower, 500);
+        function printOut(text) {
+            terminal.innerHTML += text + "\n";
+        }
+
+        // --- CALCULATOR ---
+        function executeCalc(line) {
+            if (line.toUpperCase() === "EXIT") {
+                currentMode = "SHELL";
+                printOut("Exiting Calculator...");
+                printPrompt();
+                return;
+            }
+            try {
+                // Safe eval
+                if (/[^0-9+\-*/().\s]/.test(line)) throw new Error("Invalid char");
+                const result = eval(line);
+                printOut(`= ${result}`);
+            } catch (e) {
+                printOut("Error");
+            }
+            printPrompt();
+        }
+
+        // --- CALENDAR ---
+        function showCalendar() {
+            const now = new Date();
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = now.getMonth();
+            const year = now.getFullYear();
+            
+            let cal = `    ${monthNames[month]} ${year}\nSu Mo Tu We Th Fr Sa\n`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            let d = 1;
+            for (let i = 0; i < 6; i++) {
+                let row = "";
+                for (let j = 0; j < 7; j++) {
+                    if (i === 0 && j < firstDay) {
+                        row += "   ";
+                    } else if (d > daysInMonth) {
+                        row += "   ";
+                    } else {
+                        row += d.toString().padStart(2, ' ') + " ";
+                        d++;
+                    }
+                }
+                cal += row + "\n";
+                if (d > daysInMonth) break;
+            }
+            printOut(cal);
+        }
+
+        // --- EDITOR MODE ---
+        function startEditor(filename) {
+            currentMode = "EDITOR";
+            editorFilename = filename ? filename.toUpperCase() : "UNTITLED.TXT";
+            // If file exists, load it
+            if (fileSystem[editorFilename]) {
+                editorBuffer = fileSystem[editorFilename];
+            } else {
+                editorBuffer = "";
+            }
+            
+            hiddenInput.value = editorBuffer;
+            renderEditor();
+        }
+
+        function renderEditor() {
+            // Full screen clear
+            terminal.innerHTML = "";
+            const header = `IBM EDITOR - ${editorFilename}\n--------------------------------\n`;
+            const footer = `\n\n--------------------------------\n[ESC] Save & Exit  [F1] Cancel`;
+            
+            const content = hiddenInput.value; // Get real typed content
+            // Add a cursor manually at the end
+            terminal.innerHTML = header + content + `<span class="cursor"> </span>` + footer;
+        }
+
+        function handleEditorKey(e) {
+            if (e.key === 'Escape') {
+                // Save and Exit
+                fileSystem[editorFilename] = hiddenInput.value;
+                currentMode = "SHELL";
+                terminal.innerHTML = "";
+                printOut(`File ${editorFilename} saved.`);
+                printPrompt();
+            } else if (e.key === 'F1') {
+                // Exit without saving
+                currentMode = "SHELL";
+                terminal.innerHTML = "";
+                printPrompt();
+            } else {
+                // Let the input event handle text, but we need to re-render on special keys like backspace
+                setTimeout(renderEditor, 10);
+            }
+        }
+
+        // --- ASSEMBLER ---
+        function executeAsmREPL(line) {
+            if (line.toUpperCase() === "EXIT") {
+                currentMode = "SHELL";
+                printPrompt();
+                return;
+            }
+            parseAndRunAsmLine(line);
+            printPrompt();
+        }
+
+        function runAsmFile(filename) {
+            const fname = filename.toUpperCase();
+            if (!fileSystem[fname]) {
+                printOut("File not found.");
+                return;
+            }
+            printOut(`Assembling ${fname}...`);
+            const lines = fileSystem[fname].split('\n');
+            asmRegisters = { AX: 0, BX: 0, CX: 0, DX: 0 };
+            
+            for(let line of lines) {
+                if(line.trim() !== "") parseAndRunAsmLine(line);
+            }
+            printOut("Program terminated.");
+        }
+
+        function parseAndRunAsmLine(line) {
+            // Simple Parser: OP DEST, SRC
+            line = line.trim().toUpperCase().replace(',', ' ');
+            const parts = line.split(/\s+/);
+            const op = parts[0];
+            
+            try {
+                if (op === "MOV") {
+                    const dest = parts[1];
+                    const src = parts[2];
+                    const val = getValue(src);
+                    asmRegisters[dest] = val;
+                    printOut(`> ${dest} = ${val}`);
+                } else if (op === "ADD") {
+                    const dest = parts[1];
+                    const val = getValue(parts[2]);
+                    asmRegisters[dest] += val;
+                    printOut(`> ${dest} = ${asmRegisters[dest]}`);
+                } else if (op === "SUB") {
+                    const dest = parts[1];
+                    const val = getValue(parts[2]);
+                    asmRegisters[dest] -= val;
+                    printOut(`> ${dest} = ${asmRegisters[dest]}`);
+                } else if (op === "INT") {
+                    if (parts[1] === "1") { // Fake interrupt 1: Print AX
+                        printOut(`[INT 1 OUTPUT]: ${asmRegisters.AX}`);
+                    }
+                } else if (op === "HLT") {
+                    // Do nothing
+                } else {
+                    if (op) printOut(`Unknown opcode: ${op}`);
+                }
+            } catch (err) {
+                printOut(`ASM Error: ${err.message}`);
+            }
+        }
+
+        function getValue(token) {
+            if (!token) return 0;
+            if (asmRegisters.hasOwnProperty(token)) {
+                return asmRegisters[token];
+            }
+            return parseInt(token) || 0;
+        }
 
     </script>
 </body>
