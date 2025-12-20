@@ -973,7 +973,7 @@
                 this.filename = args[0] || null;
                 this.buildTarget = (args[1] === 'BUILD') ? args[2] : null;
                 this.lines = [];
-                this.status = "MODE: EDITOR (F5: RUN | F9: BUILD)";
+                this.status = "MODE: EDITOR (F2: RUN | F4: BUILD)";
                 
                 // If opening file
                 if (this.filename && FileSystem[this.filename]) {
@@ -1075,8 +1075,8 @@
             handleInput(e) {
                 if (this.waiting) { this.waiting = false; this.render(); return; }
 
-                if (e.key === 'F5') { this.runImmediate(); return; }
-                if (e.key === 'F9') { 
+                if (e.key === 'F2') { this.runImmediate(); return; }
+                if (e.key === 'F4') { 
                     if(this.filename) {
                         FileSystem[this.filename] = this.lines.join('\n'); // Save Source
                         let exeName = this.filename.split('.')[0] + ".EXE";
