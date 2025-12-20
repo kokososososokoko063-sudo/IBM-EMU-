@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Super IBM 5150 Plus</title>
+    <title>Super IBM 5150 Plus - Ultimate Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         :root {
             --bezel-color: #dcd6c8;
             --screen-black: #050505;
-            /* Default Blue Theme */
             --phosphor-main: #55ffff; 
             --phosphor-dim: #00aaaa;
             --phosphor-glow: rgba(85, 255, 255, 0.4);
         }
 
-        /* Themes */
         .theme-green {
             --phosphor-main: #33ff00;
             --phosphor-dim: #1a8000;
@@ -88,14 +86,13 @@
             width: 100%;
             height: 82%;
             background: #000;
-            border-radius: 5% / 5%; /* More subtle curve */
+            border-radius: 5% / 5%;
             position: relative;
             overflow: hidden;
             box-shadow: inset 0 0 60px rgba(100,100,100,0.1);
             border: 15px solid #1a1a1a;
         }
 
-        /* CRT Display Grid */
         #crt-display {
             width: 100%;
             height: 100%;
@@ -113,11 +110,9 @@
             grid-template-rows: repeat(25, 1fr);
             grid-template-columns: repeat(80, 1fr);
             gap: 0;
-            /* Authentic DOS look is LTR even for Arabic text usually */
             direction: ltr; 
         }
 
-        /* Responsive Font Size */
         @media (max-width: 800px) {
             #crt-display { font-size: 1rem; padding: 5px; }
             .monitor-casing { padding: 10px; width: 98vw; aspect-ratio: auto; height: 70vh; }
@@ -138,7 +133,6 @@
             text-shadow: none;
         }
 
-        /* Scanlines & Effects */
         .overlay-scanlines {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -160,7 +154,6 @@
 
         @keyframes flicker { 0% { opacity: 0.97; } 100% { opacity: 1; } }
 
-        /* Controls */
         .controls-panel {
             margin-top: auto;
             width: 100%;
@@ -220,7 +213,6 @@
             box-shadow: 0 0 10px #f33;
         }
 
-        /* Mobile Controls (Hidden on Desktop) */
         .mobile-controls {
             display: none;
             width: 100%;
@@ -265,9 +257,6 @@
             cursor: pointer;
         }
         .mob-btn:active { background: #666; border-color: #888; }
-        .mob-btn.center { grid-column: 2; }
-
-        /* Hidden Input Trap */
         #keyboard-trap { position: absolute; opacity: 0; top: -1000px; }
 
     </style>
@@ -293,7 +282,6 @@
         </div>
     </div>
 
-    <!-- Mobile Controls -->
     <div class="mobile-controls">
         <div class="d-pad">
             <div></div>
@@ -315,14 +303,11 @@
     <input type="text" id="keyboard-trap" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 
     <script>
-        /**
-         * SUPER IBM 5150 SIMULATOR v2.0
-         * Features: FileSystem, Apps, Games, Assembler, Matrix Effect, Themes
-         */
-
+        // --- CONSTANTS ---
         const SCREEN_COLS = 80;
         const SCREEN_ROWS = 25;
         
+        // --- SYSTEM STATE ---
         const System = {
             power: false,
             mode: 'OFF', 
@@ -335,16 +320,80 @@
             theme: 'blue'
         };
 
+        // --- FILESYSTEM ---
         const FileSystem = {
-            "README.TXT": "IBM DOS 3.1 Simulator Enhanced\n\nCOMMANDS:\n- HELP: List all commands\n- COLOR [GREEN/AMBER/BLUE]: Change Theme\n- MATRIX: Screen saver effect\n- CALC: Calculator\n- SNAKE: Snake Game\n- DRAW: Drawing Tool\n- DB: Database\n- ASM: Assembler\n- EDIT [FILE]: Text Editor",
+            "README.TXT": "Super IBM 5150 Plus\n\nCOMMANDS:\n- ASM: 8088 Assembler (Supports BUILD)\n- WIN: Windows 1.0 GUI\n- SNAKE: Improved Snake Game\n- DRAW: Drawing Tool (Saves BMP)\n- MATRIX: Screen Saver\n- COLOR: Change Colors",
+            "TEST.ASM": "; Counter Example\nMOV CX, 5\nSTART:\n  MOV AX, CX\n  INT 21 ; Print\n  DEC CX\n  CMP CX, 0\n  JNE START\nINT 20 ; Exit",
             "AUTOEXEC.BAT": "ECHO OFF\nCLS\nDATE",
-            "TODO.TXT": "1. Buy Pizza\n2. Fix Y2K Bug\n3. Learn Assembler",
         };
 
         const displayEl = document.getElementById('crt-display');
         const trap = document.getElementById('keyboard-trap');
 
-        // --- Core Screen Functions ---
+        // --- SOUND ENGINE ---
+        const Sound = {
+            ctx: new (window.AudioContext || window.webkitAudioContext)(),
+            
+            init: function() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
+
+            beep: function(freq = 440, duration = 0.1, type = 'square') {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.value = 0.03;
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+
+            playClick: function() {
+                // Mechanical Keyboard Sound
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                // High click
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(2000, t);
+                osc.frequency.exponentialRampToValueAtTime(100, t + 0.05);
+                
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.05);
+            },
+
+            playHDD: function() {
+                // Mechanical HDD Seek Sound (Grinding noise)
+                this.init();
+                const t = this.ctx.currentTime;
+                // Use a noise buffer logic or simplified multiple oscillators
+                for(let i=0; i<3; i++) {
+                    setTimeout(() => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.value = 50 + Math.random() * 50;
+                        gain.gain.value = 0.02;
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.03);
+                    }, i * 40);
+                }
+            }
+        };
+
+        // --- CORE DISPLAY FUNCTIONS ---
 
         function initScreen() {
             displayEl.innerHTML = '';
@@ -416,18 +465,15 @@
 
         function scrollUp() {
             for (let r = 0; r < SCREEN_ROWS - 1; r++) {
-                // Optimize: Swap text content directly
                 for (let c = 0; c < SCREEN_COLS; c++) {
                     const curr = System.screenBuffer[r][c];
                     const next = System.screenBuffer[r+1][c];
                     curr.char = next.char;
                     curr.element.textContent = next.element.textContent;
-                    
                     if (next.element.classList.contains('inverted')) curr.element.classList.add('inverted');
                     else curr.element.classList.remove('inverted');
                 }
             }
-            // Clear last line
             for (let c = 0; c < SCREEN_COLS; c++) {
                 putChar(c, SCREEN_ROWS - 1, ' ');
             }
@@ -437,30 +483,12 @@
             if (!System.power) return;
             const cell = System.screenBuffer[System.cursor.y]?.[System.cursor.x];
             if (!cell) return;
-            
-            // Toggle inverted state only if system is idle (DOS mode or Input wait)
-            // Apps usually handle their own cursor drawing, but we can have a global blink
             if (System.cursor.visible) {
                 cell.element.classList.toggle('inverted');
             }
         }
 
-        // --- Audio ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function beep(freq = 440, duration = 0.1, type = 'square') {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.value = freq;
-            gain.gain.value = 0.03;
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
-        }
-
-        // --- System Power ---
+        // --- SYSTEM POWER & BOOT ---
         function toggleSystemPower() {
             const led = document.getElementById('power-led');
             if (System.power) {
@@ -471,6 +499,7 @@
                 clearInterval(System.blinkInterval);
                 displayEl.innerHTML = ''; 
                 trap.blur();
+                Sound.beep(100, 0.3, 'sawtooth');
             } else {
                 // Boot
                 initScreen();
@@ -478,6 +507,7 @@
                 System.mode = 'BOOT';
                 led.classList.add('on');
                 focusTrap();
+                Sound.playHDD();
                 
                 System.blinkInterval = setInterval(renderCursor, 500);
                 bootSequence();
@@ -485,45 +515,33 @@
         }
 
         async function bootSequence() {
-            beep(120, 0.1, 'sawtooth'); 
-            await delay(200);
-            beep(120, 0.1, 'sawtooth');
-            await delay(800);
-            
-            print("IBM Personal Computer BIOS v4.77");
-            await delay(300);
-            print("Copyright IBM Corp 1981, 1988");
-            await delay(300);
-            
-            print("640 KB System RAM Passed");
             await delay(500);
-            
-            print("Loading DOS...");
-            beep(600, 0.05);
+            print("IBM Personal Computer BIOS v4.77");
+            await delay(200);
+            print("Copyright IBM Corp 1981, 1988");
+            await delay(500);
+            print("640 KB System RAM Passed");
+            Sound.playHDD();
             await delay(800);
-            
+            print("Loading DOS...");
+            Sound.beep(800, 0.1);
+            await delay(1000);
             clearScreen();
             System.mode = 'DOS';
-            print("IBM DOS Version 3.10 (Enhanced)");
+            print("IBM DOS Version 3.30");
             print("(C)Copyright IBM Corp 1981-1988");
             print("");
-            print("Type 'HELP' for instructions.");
             prompt();
         }
 
         function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
         function prompt() { print(System.path + ">", false); }
 
-        // --- Input Handling ---
+        // --- INPUT HANDLING ---
         function focusTrap() {
             if(System.power) trap.focus();
         }
 
-        function showKeyboard() {
-            trap.focus();
-        }
-
-        // Mobile Button Helper
         window.simulateKey = function(key) {
             const event = new KeyboardEvent('keydown', { key: key });
             document.dispatchEvent(event);
@@ -532,10 +550,11 @@
         document.addEventListener('keydown', (e) => {
             if (!System.power) return;
             focusTrap();
-
-            // Prevent browser shortcuts
             if(e.key === 'Tab' || e.key === 'Alt') e.preventDefault();
             
+            // Sound Effect
+            if(e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace') Sound.playClick();
+
             if (System.currentApp) {
                 System.currentApp.handleInput(e);
             } else if (System.mode === 'DOS') {
@@ -544,7 +563,6 @@
         });
 
         function handleDOSInput(e) {
-            // Remove cursor highlight before moving
             const cell = System.screenBuffer[System.cursor.y][System.cursor.x];
             cell.element.classList.remove('inverted');
 
@@ -556,43 +574,58 @@
                     System.cursor.x--;
                     putChar(System.cursor.x, System.cursor.y, ' ');
                 }
-            } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                // Only print visible chars
+            } else if (e.key.length === 1 && !e.ctrlKey) {
                 System.inputBuffer += e.key;
                 print(e.key, false);
             }
         }
 
+        // --- DOS SHELL ---
         function processCommand() {
             const cmdLine = System.inputBuffer.trim();
             System.inputBuffer = '';
-            print(""); // New line
+            print(""); 
 
             if (!cmdLine) { prompt(); return; }
 
+            // Parse: command arg1 arg2 ...
+            // Handle filenames with spaces if needed, but keeping simple for now
             const parts = cmdLine.split(' ');
             const cmd = parts[0].toUpperCase();
-            const arg = parts[1] ? parts[1].toUpperCase() : null;
+            
+            // Arguments handling (re-joining for things like BUILD file.asm out.exe)
+            const args = parts.slice(1);
+
+            // Check for Executables First (Virtual EXE/COM)
+            if (cmd.endsWith('.EXE') || cmd.endsWith('.COM')) {
+                if (FileSystem[cmd] && FileSystem[cmd].startsWith("$$EXE$$")) {
+                    launchApp(new EXEApp(FileSystem[cmd]));
+                    return;
+                }
+            }
 
             switch (cmd) {
                 case 'CLS': clearScreen(); break;
                 case 'DIR': listFiles(); break;
-                case 'DEL': deleteFile(arg); break;
-                case 'HELP': showHelp(); break;
-                case 'COLOR': changeTheme(arg); break;
+                case 'DEL': deleteFile(args[0]); break;
+                case 'COLOR': changeTheme(args[0]); break;
                 case 'MATRIX': launchApp(new MatrixApp()); break;
                 case 'DRAW': launchApp(new DrawApp()); break;
                 case 'SNAKE': launchApp(new SnakeApp()); break;
                 case 'DB': launchApp(new DBApp()); break;
                 case 'CALC': launchApp(new CalcApp()); break;
-                case 'EDIT': launchApp(new EditApp(arg)); break;
-                case 'ASM': launchApp(new AsmApp(arg)); break;
-                case 'DATE': print(new Date().toDateString()); break;
-                case 'TIME': print(new Date().toLocaleTimeString()); break;
-                case 'VER': print("IBM Personal Computer DOS Version 3.10"); break;
+                case 'EDIT': launchApp(new EditApp(args[0])); break;
+                case 'ASM': launchApp(new AsmApp(args)); break;
+                case 'WIN': launchApp(new WindowsApp()); break;
+                case 'TYPE': 
+                    if(FileSystem[args[0]]) print(FileSystem[args[0]]); 
+                    else print("File not found");
+                    break;
+                case 'VER': print("IBM Personal Computer DOS Version 3.30"); break;
                 default:
-                    if (FileSystem[cmd] || FileSystem[cmd + ".TXT"]) {
-                        print("Use 'EDIT' to view text files.");
+                    // Check if it's an ASM file the user wants to run or edit
+                    if (FileSystem[cmd]) {
+                         print("Bad command or filename. (If executable, ensure .EXE extension)");
                     } else {
                         print("Bad command or file name");
                     }
@@ -602,12 +635,13 @@
         }
 
         function listFiles() {
-            print(" Volume in drive A is WORKBENCH");
+            print(" Volume in drive A is SUPER_PC");
             print(" Directory of A:\\");
             print("");
             let count = 0;
+            Sound.playHDD();
             for (let f in FileSystem) {
-                let size = FileSystem[f].length * 10;
+                let size = FileSystem[f].length;
                 let spaces = " ".repeat(Math.max(1, 14 - f.length));
                 print(` ${f}${spaces}${size}`);
                 count++;
@@ -615,25 +649,12 @@
             print(`        ${count} File(s)`);
         }
 
-        function showHelp() {
-            print("Available Commands:");
-            print("-------------------");
-            print(" DIR     - List files");
-            print(" CLS     - Clear screen");
-            print(" COLOR   - Change theme (GREEN, AMBER, WHITE, BLUE)");
-            print(" DRAW    - Draw with keyboard");
-            print(" SNAKE   - Snake Game");
-            print(" CALC    - Simple Calculator");
-            print(" MATRIX  - Screen saver");
-            print(" ASM     - 8088 Assembler");
-            print(" DB      - Database");
-            print(" EDIT    - Text Editor");
-        }
-
         function deleteFile(filename) {
             if (!filename) { print("Error: Missing filename"); return; }
+            filename = filename.toUpperCase();
             if (FileSystem[filename]) {
                 delete FileSystem[filename];
+                Sound.playHDD();
                 print("File deleted.");
             } else {
                 print("File not found.");
@@ -641,15 +662,14 @@
         }
 
         function changeTheme(color) {
+            if(!color) return;
+            color = color.toUpperCase();
             const casing = document.getElementById('casing');
             casing.classList.remove('theme-green', 'theme-amber', 'theme-white');
-            
             if (color === 'GREEN') casing.classList.add('theme-green');
             else if (color === 'AMBER') casing.classList.add('theme-amber');
             else if (color === 'WHITE') casing.classList.add('theme-white');
-            // Default is blue
-            
-            print(`Theme changed to ${color || 'BLUE'}`);
+            print(`Theme changed to ${color}`);
         }
 
         function launchApp(app) {
@@ -667,99 +687,69 @@
         }
 
         // ==========================================
-        //  APP: MATRIX (Rain Effect)
+        //  APP: WINDOWS 1.0 (GUI Simulation)
         // ==========================================
-        class MatrixApp {
+        class WindowsApp {
             constructor() {
-                this.drops = [];
-                for(let i=0; i<SCREEN_COLS; i++) this.drops[i] = Math.random() * -50;
-                this.timer = null;
-                this.chars = "010101XYZAOB@#$%^&*";
+                this.mouseX = 40;
+                this.mouseY = 12;
             }
             init() {
-                this.timer = setInterval(() => this.update(), 50);
+                this.drawDesktop();
+                this.drawWindow(10, 5, 60, 15, "MS-DOS Executive");
+                printAt(12, 8, "A:\\", true);
+                printAt(12, 10, "CALC.EXE");
+                printAt(12, 11, "REVERSI.EXE");
+                printAt(12, 12, "WRITE.EXE");
             }
-            update() {
-                // Dim screen slightly manually or just overwrite
-                // For simplicity, we just draw new chars
-                for (let i = 0; i < this.drops.length; i++) {
-                    const char = this.chars[Math.floor(Math.random() * this.chars.length)];
-                    const y = Math.floor(this.drops[i]);
-                    
-                    if (y >= 0 && y < SCREEN_ROWS) {
-                        // Draw head (white/bright)
-                        putChar(i, y, char, true); 
-                        // Dim tail
-                        if (y > 0) putChar(i, y - 1, System.screenBuffer[y-1][i].char, false);
-                    }
-                    
-                    this.drops[i]++;
-                    
-                    if (this.drops[i] > SCREEN_ROWS && Math.random() > 0.95) {
-                        this.drops[i] = 0;
-                        // Clean column logic would be nice but complex for this grid
+            drawDesktop() {
+                for(let r=0; r<SCREEN_ROWS; r++) {
+                    for(let c=0; c<SCREEN_COLS; c++) {
+                        putChar(c, r, '░');
                     }
                 }
+                // Menu Bar
+                printAt(0, 0, " ".repeat(SCREEN_COLS), true);
+                printAt(2, 0, "File  View  Special", true);
             }
-            handleInput(e) {
-                clearInterval(this.timer);
-                closeApp();
-            }
-        }
-
-        // ==========================================
-        //  APP: CALCULATOR
-        // ==========================================
-        class CalcApp {
-            constructor() {
-                this.input = "";
-                this.result = "";
-            }
-            init() {
-                this.render();
-            }
-            render() {
-                clearScreen();
-                printAt(25, 5, "==============================");
-                printAt(25, 6, "|      BASIC CALCULATOR      |");
-                printAt(25, 7, "==============================");
-                printAt(25, 9, ` INPUT: ${this.input}`);
-                printAt(25, 11,` RESULT: ${this.result}`, true);
+            drawWindow(x, y, w, h, title) {
+                // Drop shadow
+                for(let i=1; i<h; i++) printAt(x+w, y+i, "▓");
+                for(let i=1; i<w; i++) printAt(x+i, y+h, "▓");
                 
-                printAt(20, 20, "Type numbers and +, -, *, /. ENTER to calc. ESC to quit.");
+                // Window Body
+                for(let i=0; i<h; i++) {
+                    printAt(x, y+i, " ".repeat(w));
+                }
+                // Title Bar
+                printAt(x, y, " ".repeat(w), true);
+                printAt(x + (w-title.length)/2, y, title, true);
+                printAt(x+1, y, "[=]", true);
             }
             handleInput(e) {
                 if (e.key === 'Escape') closeApp();
-                else if (e.key === 'Enter') {
-                    try {
-                        // Safe evaluation
-                        if (/^[0-9+\-*/.() ]+$/.test(this.input)) {
-                            // eslint-disable-next-line no-eval
-                            this.result = eval(this.input); 
-                        } else {
-                            this.result = "ERROR";
-                        }
-                    } catch {
-                        this.result = "ERROR";
-                    }
-                    this.input = "";
-                    this.render();
-                } else if (e.key === 'Backspace') {
-                    this.input = this.input.slice(0, -1);
-                    this.render();
-                } else if ("0123456789+-*/.()".includes(e.key)) {
-                    this.input += e.key;
-                    this.render();
+                // Move "Mouse"
+                if (e.key.startsWith('Arrow')) {
+                    const oldX = this.mouseX; const oldY = this.mouseY;
+                    // Restore background char at old pos (simplified)
+                    
+                    if (e.key === 'ArrowUp') this.mouseY--;
+                    if (e.key === 'ArrowDown') this.mouseY++;
+                    if (e.key === 'ArrowLeft') this.mouseX--;
+                    if (e.key === 'ArrowRight') this.mouseX++;
+                    
+                    // Simple cursor render
+                    putChar(this.mouseX, this.mouseY, '↖', true);
                 }
             }
         }
 
         // ==========================================
-        //  APP: SNAKE
+        //  APP: SNAKE (IMPROVED)
         // ==========================================
         class SnakeApp {
             constructor() {
-                this.snake = [{x: 40, y: 12}];
+                this.snake = [{x: 40, y: 12}, {x:39, y:12}, {x:38, y:12}];
                 this.dir = {x: 1, y: 0};
                 this.food = {x: 10, y: 10};
                 this.score = 0;
@@ -773,8 +763,8 @@
             spawnFood() {
                 do {
                     this.food = {
-                        x: Math.floor(Math.random() * SCREEN_COLS),
-                        y: Math.floor(Math.random() * SCREEN_ROWS)
+                        x: 2 + Math.floor(Math.random() * (SCREEN_COLS - 4)),
+                        y: 2 + Math.floor(Math.random() * (SCREEN_ROWS - 4))
                     };
                 } while (this.snake.some(s => s.x === this.food.x && s.y === this.food.y));
             }
@@ -782,7 +772,8 @@
                 if (this.gameOver) return;
                 let head = {x: this.snake[0].x + this.dir.x, y: this.snake[0].y + this.dir.y};
 
-                if (head.x < 0 || head.x >= SCREEN_COLS || head.y < 0 || head.y >= SCREEN_ROWS ||
+                // Border Collision
+                if (head.x < 1 || head.x >= SCREEN_COLS-1 || head.y < 1 || head.y >= SCREEN_ROWS-1 ||
                     this.snake.some(s => s.x === head.x && s.y === head.y)) {
                     this.endGame(); return;
                 }
@@ -790,7 +781,7 @@
                 this.snake.unshift(head);
                 if (head.x === this.food.x && head.y === this.food.y) {
                     this.score += 10;
-                    beep(800, 0.05);
+                    Sound.beep(1200, 0.05);
                     this.spawnFood();
                 } else {
                     this.snake.pop();
@@ -799,19 +790,26 @@
             }
             draw() {
                 clearScreen();
-                // Draw Border (Optional, skipped for clean look)
+                // Draw Border
+                for(let c=0; c<SCREEN_COLS; c++) { putChar(c, 0, '═'); putChar(c, SCREEN_ROWS-1, '═'); }
+                for(let r=0; r<SCREEN_ROWS; r++) { putChar(0, r, '║'); putChar(SCREEN_COLS-1, r, '║'); }
+                putChar(0,0,'╔'); putChar(SCREEN_COLS-1,0,'╗'); 
+                putChar(0,SCREEN_ROWS-1,'╚'); putChar(SCREEN_COLS-1,SCREEN_ROWS-1,'╝');
+
+                // Draw Score
+                printAt(2, 0, ` SCORE: ${this.score} `, true);
+
                 // Draw Food
-                putChar(this.food.x, this.food.y, '♥', true);
+                putChar(this.food.x, this.food.y, '♥');
                 // Draw Snake
-                this.snake.forEach((s, i) => putChar(s.x, s.y, i===0?'O':'o'));
-                printAt(0, 0, `SCORE: ${this.score}`);
+                this.snake.forEach((s) => putChar(s.x, s.y, '█'));
             }
             endGame() {
                 this.gameOver = true;
                 clearInterval(this.timer);
-                printAt(35, 12, "GAME OVER", true);
-                printAt(32, 13, "Press ESC to Exit");
-                beep(100, 0.5, 'sawtooth');
+                printAt(35, 12, " GAME OVER ", true);
+                printAt(32, 13, " Press ESC to Exit ");
+                Sound.beep(100, 0.5, 'sawtooth');
             }
             handleInput(e) {
                 if (e.key === 'Escape') { clearInterval(this.timer); closeApp(); }
@@ -823,7 +821,7 @@
         }
 
         // ==========================================
-        //  APP: DRAW
+        //  APP: DRAW (Saves to simulated BMP)
         // ==========================================
         class DrawApp {
             constructor() {
@@ -834,7 +832,7 @@
                 this.idx = 0;
             }
             init() {
-                printAt(0, 0, "DRAW: ARROWS=Move SPC=Pen 'C'=Change 'S'=Save ESC=Exit", true);
+                printAt(0, 0, "DRAW: ARROWS=Move SPC=Pen 'C'=Change 'S'=Save BMP ESC=Exit", true);
             }
             handleInput(e) {
                 if (e.key === 'Escape') closeApp();
@@ -845,7 +843,7 @@
                 
                 if (e.key === ' ') {
                     this.penDown = !this.penDown;
-                    beep(this.penDown ? 600 : 300, 0.05);
+                    Sound.beep(this.penDown ? 600 : 300, 0.05);
                 }
                 if (e.key.toUpperCase() === 'C') {
                     this.idx = (this.idx + 1) % this.chars.length;
@@ -853,112 +851,248 @@
                     printAt(60, 0, `Char:${this.char}`, true);
                 }
                 if (e.key.toUpperCase() === 'S') {
-                    FileSystem["ART.TXT"] = "Draw Data";
-                    printAt(50, 0, "SAVED!", true);
+                    this.saveBMP();
                 }
 
                 if (this.penDown) putChar(this.x, this.y, this.char);
                 System.cursor.x = this.x; System.cursor.y = this.y;
             }
+            saveBMP() {
+                // Serialize screen buffer
+                let data = "TYPE:BMP\n";
+                for(let r=1; r<SCREEN_ROWS; r++) { // Skip header
+                    let line = "";
+                    for(let c=0; c<SCREEN_COLS; c++) {
+                        line += System.screenBuffer[r][c].char;
+                    }
+                    data += line + "\n";
+                }
+                FileSystem["IMAGE.BMP"] = data;
+                Sound.playHDD();
+                printAt(50, 0, "SAVED IMAGE.BMP", true);
+            }
         }
 
         // ==========================================
-        //  APP: DB
+        //  APP: ASSEMBLER 2.0 (True 8088 Sim)
         // ==========================================
-        class DBApp {
+        
+        // Virtual CPU Class
+        class CPU8088 {
             constructor() {
-                this.records = [];
-                this.state = 'MENU';
-                this.tempInput = '';
-                this.tempRecord = {};
+                this.regs = { AX:0, BX:0, CX:0, DX:0, SI:0, DI:0, SP: 100, BP:0, IP:0 };
+                this.flags = { Z: false, S: false, O: false };
+                this.stack = new Array(256).fill(0);
+                this.program = []; // Array of instruction objects
+                this.labels = {};  // Map Label -> Instruction Index
+                this.output = [];
             }
-            init() {
-                this.records = [
-                    {name: "JOHN DOE", age: "25", job: "DEV"},
-                    {name: "JANE SMITH", age: "32", job: "CEO"}
-                ];
-                this.renderMenu();
+
+            reset() {
+                this.regs = { AX:0, BX:0, CX:0, DX:0, SI:0, DI:0, SP: 100, BP:0, IP:0 };
+                this.flags = { Z: false, S: false };
+                this.output = [];
             }
-            renderMenu() {
-                clearScreen();
-                printAt(0, 0, "IBM DATA MASTER v1.0", true);
-                printAt(0, 2, "[1] ADD RECORD   [ESC] EXIT");
-                printAt(0, 4, "NAME            AGE   JOB");
-                printAt(0, 5, "------------------------------");
-                this.records.forEach((r, i) => {
-                    printAt(0, 6+i, `${r.name.padEnd(16)}${r.age.padEnd(6)}${r.job}`);
-                });
+
+            load(compiledObj) {
+                this.program = compiledObj.code;
+                this.labels = compiledObj.labels;
+                this.reset();
             }
-            handleInput(e) {
-                if (this.state === 'MENU') {
-                    if (e.key === 'Escape') closeApp();
-                    if (e.key === '1') {
-                        this.state = 'INPUT_NAME';
-                        this.tempInput = '';
-                        this.drawInput("NAME");
-                    }
-                } else {
-                    if (e.key === 'Enter') {
-                        if (this.state === 'INPUT_NAME') {
-                            this.tempRecord.name = this.tempInput;
-                            this.state = 'INPUT_AGE'; this.tempInput = ''; this.drawInput("AGE");
-                        } else if (this.state === 'INPUT_AGE') {
-                            this.tempRecord.age = this.tempInput;
-                            this.state = 'INPUT_JOB'; this.tempInput = ''; this.drawInput("JOB");
-                        } else if (this.state === 'INPUT_JOB') {
-                            this.tempRecord.job = this.tempInput;
-                            this.records.push(this.tempRecord);
-                            this.tempRecord = {};
-                            this.state = 'MENU';
-                            this.renderMenu();
-                        }
-                    } else if (e.key === 'Backspace') {
-                        this.tempInput = this.tempInput.slice(0, -1);
-                        this.updateInputDisplay();
-                    } else if (e.key.length === 1) {
-                        this.tempInput += e.key.toUpperCase();
-                        this.updateInputDisplay();
-                    }
+
+            step() {
+                if (this.regs.IP >= this.program.length) return false; // Halted
+                
+                const instr = this.program[this.regs.IP];
+                this.regs.IP++; // Default advance
+                
+                try {
+                    this.execute(instr);
+                    return true;
+                } catch(e) {
+                    this.output.push("RUNTIME ERR: " + e.message);
+                    return false;
                 }
             }
-            drawInput(label) {
-                printAt(0, 20, "                              ");
-                printAt(0, 20, `${label}: `);
+
+            getVal(op) {
+                if (typeof op === 'number') return op;
+                if (this.regs[op] !== undefined) return this.regs[op];
+                throw new Error("Invalid operand: " + op);
             }
-            updateInputDisplay() {
-                printAt(10, 20, this.tempInput + "_ ");
+
+            setVal(dest, val) {
+                if (this.regs[dest] !== undefined) this.regs[dest] = val;
+                // else ignore or error
+            }
+
+            execute(instr) {
+                const op = instr.op;
+                const a1 = instr.args[0];
+                const a2 = instr.args[1];
+
+                switch(op) {
+                    case 'MOV': this.setVal(a1, this.getVal(a2)); break;
+                    case 'ADD': this.setVal(a1, this.getVal(a1) + this.getVal(a2)); break;
+                    case 'SUB': 
+                        let res = this.getVal(a1) - this.getVal(a2);
+                        this.setVal(a1, res);
+                        this.flags.Z = (res === 0);
+                        this.flags.S = (res < 0);
+                        break;
+                    case 'INC': this.setVal(a1, this.getVal(a1) + 1); break;
+                    case 'DEC': 
+                        let dec = this.getVal(a1) - 1;
+                        this.setVal(a1, dec);
+                        this.flags.Z = (dec === 0);
+                        break;
+                    case 'CMP':
+                        let cmp = this.getVal(a1) - this.getVal(a2);
+                        this.flags.Z = (cmp === 0);
+                        this.flags.S = (cmp < 0);
+                        break;
+                    case 'JMP': 
+                        if (this.labels[a1] !== undefined) this.regs.IP = this.labels[a1]; 
+                        break;
+                    case 'JE':  if (this.flags.Z) this.regs.IP = this.labels[a1]; break;
+                    case 'JNE': if (!this.flags.Z) this.regs.IP = this.labels[a1]; break;
+                    case 'JG':  if (!this.flags.S && !this.flags.Z) this.regs.IP = this.labels[a1]; break;
+                    case 'JL':  if (this.flags.S) this.regs.IP = this.labels[a1]; break;
+                    
+                    case 'INT':
+                        if (a1 == 20) this.regs.IP = this.program.length; // Exit
+                        if (a1 == 21) this.output.push(`${this.regs.AX}`); // Simple print
+                        break;
+                }
             }
         }
 
-        // ==========================================
-        //  APP: EDIT
-        // ==========================================
-        class EditApp {
-            constructor(filename) {
-                this.filename = filename || "UNTITLED.TXT";
-                this.lines = [""];
+        // Assembler App (Editor & Compiler)
+        class AsmApp {
+            constructor(args) {
+                this.filename = args[0] || null;
+                this.buildTarget = (args[1] === 'BUILD') ? args[2] : null;
+                this.lines = [];
+                this.status = "MODE: EDITOR (F5: RUN | F9: BUILD)";
+                
+                // If opening file
+                if (this.filename && FileSystem[this.filename]) {
+                    this.lines = FileSystem[this.filename].split('\n');
+                } else if (this.filename) {
+                    this.lines = ["; New ASM File", ""];
+                } else {
+                    this.lines = ["; Interactive Mode", "MOV AX, 1", "ADD AX, 2", "INT 21", "INT 20"];
+                }
                 this.cy = 0; this.cx = 0;
             }
+
             init() {
-                if(FileSystem[this.filename]) this.lines = FileSystem[this.filename].split('\n');
+                // If command was "ASM file.asm BUILD out.exe"
+                if (this.filename && this.buildTarget) {
+                    this.compileAndLink(this.buildTarget);
+                    closeApp();
+                    return;
+                }
+                // Else open editor
                 this.render();
             }
+
+            compile(sourceLines) {
+                const code = [];
+                const labels = {};
+                let ptr = 0;
+
+                // Pass 1: Labels & Parsing
+                for (let line of sourceLines) {
+                    // Remove comments
+                    line = line.split(';')[0].trim();
+                    if (!line) continue;
+
+                    if (line.endsWith(':')) {
+                        labels[line.slice(0, -1)] = ptr;
+                        continue;
+                    }
+
+                    const parts = line.replace(',', ' ').split(/\s+/);
+                    const op = parts[0].toUpperCase();
+                    const args = parts.slice(1).map(a => {
+                        return isNaN(parseInt(a)) ? a : parseInt(a);
+                    });
+
+                    code.push({ op, args });
+                    ptr++;
+                }
+
+                return { code, labels };
+            }
+
+            compileAndLink(targetName) {
+                try {
+                    const binary = this.compile(this.lines);
+                    // Add .EXE if missing
+                    if(!targetName.toUpperCase().endsWith('.EXE') && !targetName.toUpperCase().endsWith('.COM')) {
+                        targetName += ".EXE";
+                    }
+                    // Save as "Executable" JSON string
+                    FileSystem[targetName.toUpperCase()] = "$$EXE$$" + JSON.stringify(binary);
+                    print(`Bound ${targetName} successfully.`);
+                    Sound.playHDD();
+                } catch(e) {
+                    print("Build Error: " + e.message);
+                }
+            }
+
+            runImmediate() {
+                clearScreen();
+                print("--- ASM OUTPUT ---");
+                try {
+                    const cpu = new CPU8088();
+                    const bin = this.compile(this.lines);
+                    cpu.load(bin);
+                    
+                    let cycles = 0;
+                    while(cpu.step() && cycles < 1000) { cycles++; } // Limit cycles to prevent freeze
+                    
+                    cpu.output.forEach(l => print(l));
+                    print("--- EXEC FINISHED ---");
+                } catch(e) {
+                    print("ERR: " + e.message);
+                }
+                print("Press ANY KEY to return.");
+                this.waiting = true;
+            }
+
             render() {
                 clearScreen();
-                printAt(0, 0, `EDIT: ${this.filename} - F2:SAVE ESC:EXIT`, true);
+                printAt(0, 0, `ASM EDITOR: ${this.filename || "Untitled"}  ${this.status}`, true);
                 for(let i=0; i<Math.min(23, this.lines.length); i++) {
                     printAt(0, i+1, this.lines[i]);
                 }
                 System.cursor.x = this.cx;
                 System.cursor.y = this.cy + 1;
             }
+
             handleInput(e) {
-                if(e.key === 'Escape') closeApp();
-                else if(e.key === 'F2') {
-                    FileSystem[this.filename] = this.lines.join('\n');
-                    printAt(60,0, "SAVED", true);
+                if (this.waiting) { this.waiting = false; this.render(); return; }
+
+                if (e.key === 'F5') { this.runImmediate(); return; }
+                if (e.key === 'F9') { 
+                    if(this.filename) {
+                        FileSystem[this.filename] = this.lines.join('\n'); // Save Source
+                        let exeName = this.filename.split('.')[0] + ".EXE";
+                        this.compileAndLink(exeName);
+                        this.status = `Built ${exeName}!`;
+                        this.render();
+                    } else {
+                        this.status = "Save file first!";
+                        this.render();
+                    }
+                    return; 
                 }
-                else if(e.key === 'ArrowUp') { this.cy = Math.max(0, this.cy-1); this.cx = Math.min(this.cx, this.lines[this.cy].length); }
+                if (e.key === 'Escape') { closeApp(); return; }
+                
+                // Editor Logic
+                if(e.key === 'ArrowUp') { this.cy = Math.max(0, this.cy-1); this.cx = Math.min(this.cx, this.lines[this.cy].length); }
                 else if(e.key === 'ArrowDown') { if(this.cy < this.lines.length-1) this.cy++; this.cx = Math.min(this.cx, this.lines[this.cy].length); }
                 else if(e.key === 'ArrowLeft') this.cx = Math.max(0, this.cx-1);
                 else if(e.key === 'ArrowRight') this.cx = Math.min(this.lines[this.cy].length, this.cx+1);
@@ -989,59 +1123,95 @@
             }
         }
 
-        // ==========================================
-        //  APP: ASSEMBLER
-        // ==========================================
-        class AsmApp {
-            constructor(filename) {
-                this.regs = { AX:0, BX:0, CX:0, DX:0 };
+        // Executor for compiled EXE files
+        class EXEApp {
+            constructor(fileContent) {
+                this.binData = JSON.parse(fileContent.substring(7));
             }
             init() {
-                print("IBM 8088 Macro Assembler");
-                print("Enter instruction (e.g., MOV AX 5). Type EXIT to quit.");
+                print("Loading executable into memory...");
+                try {
+                    const cpu = new CPU8088();
+                    cpu.load(this.binData);
+                    let cycles = 0;
+                    while(cpu.step() && cycles < 2000) { cycles++; }
+                    cpu.output.forEach(l => print(l));
+                } catch(e) {
+                    print("Program crashed: " + e.message);
+                }
+                Sound.beep(440, 0.2);
+                print("");
+                print("Program terminated.");
+                print("Press ESC.");
             }
             handleInput(e) {
-                // Use standard DOS input logic for the command line style interface
-                const cell = System.screenBuffer[System.cursor.y][System.cursor.x];
-                cell.element.classList.remove('inverted');
+                if(e.key === 'Escape') closeApp();
+            }
+        }
 
-                if (e.key === 'Enter') {
-                    const line = System.inputBuffer.trim();
-                    System.inputBuffer = '';
-                    print(""); 
-                    if(line) this.exec(line);
-                    else print(">");
-                } else if (e.key === 'Backspace') {
-                    if (System.inputBuffer.length > 0) {
-                        System.inputBuffer = System.inputBuffer.slice(0, -1);
-                        System.cursor.x--;
-                        putChar(System.cursor.x, System.cursor.y, ' ');
+        // ==========================================
+        //  OTHER APPS
+        // ==========================================
+        class MatrixApp {
+            constructor() {
+                this.drops = [];
+                for(let i=0; i<SCREEN_COLS; i++) this.drops[i] = Math.random() * -50;
+                this.timer = null;
+                this.chars = "010101XYZAOB@#$%^&*";
+            }
+            init() { this.timer = setInterval(() => this.update(), 50); }
+            update() {
+                for (let i = 0; i < this.drops.length; i++) {
+                    const char = this.chars[Math.floor(Math.random() * this.chars.length)];
+                    const y = Math.floor(this.drops[i]);
+                    if (y >= 0 && y < SCREEN_ROWS) {
+                        putChar(i, y, char, true); 
+                        if (y > 0) putChar(i, y - 1, System.screenBuffer[y-1][i].char, false);
                     }
-                } else if (e.key.length === 1) {
-                    System.inputBuffer += e.key;
-                    print(e.key, false);
+                    this.drops[i]++;
+                    if (this.drops[i] > SCREEN_ROWS && Math.random() > 0.95) this.drops[i] = 0;
                 }
             }
-            exec(line) {
-                const parts = line.replace(',',' ').trim().toUpperCase().split(/\s+/);
-                const op = parts[0];
-                if (op === 'EXIT') { closeApp(); return; }
-                
-                try {
-                    const getVal = v => this.regs[v] !== undefined ? this.regs[v] : parseInt(v);
-                    
-                    if(op === 'MOV') this.regs[parts[1]] = getVal(parts[2]);
-                    else if(op === 'ADD') this.regs[parts[1]] += getVal(parts[2]);
-                    else if(op === 'SUB') this.regs[parts[1]] -= getVal(parts[2]);
-                    else if(op === 'INT' && parts[1] === '21') print(`> OUTPUT: ${this.regs.AX}`);
-                    else if(op === 'PRINT') print(parts.slice(1).join(' '));
-                    else throw new Error("Unknown Opcode");
-                    
-                    print(`AX=${this.regs.AX} BX=${this.regs.BX} CX=${this.regs.CX} DX=${this.regs.DX}`);
-                } catch(err) {
-                    print("ASM ERROR: " + err.message);
+            handleInput(e) { clearInterval(this.timer); closeApp(); }
+        }
+
+        class CalcApp {
+            constructor() { this.input = ""; this.result = ""; }
+            init() { this.render(); }
+            render() {
+                clearScreen();
+                printAt(25, 5, "==============================");
+                printAt(25, 6, "|      BASIC CALCULATOR      |");
+                printAt(25, 7, "==============================");
+                printAt(25, 9, ` IN : ${this.input}`);
+                printAt(25, 11,` OUT: ${this.result}`, true);
+            }
+            handleInput(e) {
+                if (e.key === 'Escape') closeApp();
+                else if (e.key === 'Enter') {
+                    try { this.result = eval(this.input); } catch { this.result = "ERR"; }
+                    this.input = ""; this.render();
+                } else if (e.key === 'Backspace') {
+                    this.input = this.input.slice(0, -1); this.render();
+                } else if ("0123456789+-*/.()".includes(e.key)) {
+                    this.input += e.key; this.render();
                 }
             }
+        }
+        
+        class DBApp {
+            constructor() { this.records = [{name: "JOHN", age: "25"}, {name: "JANE", age: "30"}]; }
+            init() { this.render(); }
+            render() {
+                clearScreen();
+                printAt(0, 0, "DB APP - [ESC] EXIT");
+                this.records.forEach((r,i) => printAt(0, 2+i, `${r.name} - ${r.age}`));
+            }
+            handleInput(e) { if(e.key === 'Escape') closeApp(); }
+        }
+
+        class EditApp extends AsmApp {
+            init() { this.render(); } // Uses same editor logic as ASM but no compile
         }
 
     </script>
